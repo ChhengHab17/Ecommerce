@@ -1,0 +1,43 @@
+{
+  "name": "@org/auth-service",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "node src/main.ts"
+  },
+  "nx": {
+    "name": "@org/auth-service",
+    "projectType": "application",
+    "sourceRoot": "auth-service/src",
+    "targets": {
+      "serve": {
+        "continuous": true,
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "@org/auth-service:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "@org/auth-service:build:development"
+          },
+          "production": {
+            "buildTarget": "@org/auth-service:build:production"
+          }
+        }
+      },
+      "test": {
+        "options": {
+          "passWithNoTests": true
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

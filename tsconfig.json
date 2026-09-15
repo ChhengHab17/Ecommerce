@@ -1,0 +1,46 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/api/products"
+    },
+    {
+      "path": "./packages/shared/models"
+    },
+    {
+      "path": "./packages/shop/data"
+    },
+    {
+      "path": "./packages/shop/feature-product-detail"
+    },
+    {
+      "path": "./packages/shop/feature-products"
+    },
+    {
+      "path": "./packages/shop/shared-ui"
+    },
+    {
+      "path": "./packages/shared/test-utils"
+    },
+    {
+      "path": "./apps/api-gateway-e2e"
+    },
+    {
+      "path": "./apps/api-gateway"
+    },
+    {
+      "path": "./apps/auth-service-e2e"
+    },
+    {
+      "path": "./apps/auth-service"
+    },
+    {
+      "path": "./apps/user-ui"
+    },
+    {
+      "path": "./apps/admin-ui"
+    }
+  ]
+}
