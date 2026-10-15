@@ -266,7 +266,7 @@ export const verifySeller = async (req: Request, res: Response, next: NextFuncti
 export const createShop = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name , bio, category, address, opening_hours, social_links, sellerId, website } = req.body;
-    if (!name || !bio || !category || !address || !opening_hours || !social_links || !sellerId) {
+    if (!name || !bio || !category || !address || !opening_hours || !sellerId) {
       return next(new ValidationError('Missing required fields'));
     }
     const shopData:any = {
@@ -291,6 +291,57 @@ export const createShop = async (req: Request, res: Response, next: NextFunction
       message: 'Shop created successfully',
     });
   }catch (error) {
+    return next(error);
+  }
+}
+
+export const loginSeller = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return next(new ValidationError('Missing required fields'));
+    }
+    const seller = await prisma.sellers.findUnique({
+      where: { email },
+    });
+    if (!seller) {
+      return next(new ValidationError('Invalid email or password'));
+    }
+    const isMatchingPassword = await bcrypt.compare(password, seller.password!);
+    if (!isMatchingPassword) {
+      return next(new ValidationError('Invalid email or password'));
+    }
+
+    const accessToken = jwt.sign({ sellerId: seller.id, role: "seller" }, process.env.ACCESS_TOKEN_SECRET!, {
+      expiresIn: '15m',
+    });
+    const refreshToken = jwt.sign({ sellerId: seller.id, role: "seller" }, process.env.REFRESH_TOKEN_SECRET!, {
+      expiresIn: '7d',
+    });
+    setCookie(res, 'seller_access_token', accessToken);
+    setCookie(res, 'seller_refresh_token', refreshToken);
+
+    return res.status(200).json({
+      message: 'Seller logged in successfully',
+      success: true,
+      data: { seller: { id: seller.id, email: seller.email, name: seller.name } },
+    });
+  }
+  catch (error) {
+    return next(error);
+  }
+}
+
+export const getSeller = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const seller = req.seller;
+    res.status(201).json({
+      message: 'Seller found',
+      success: true,
+      data: { seller: { id: seller?.id, email: seller?.email, name: seller?.name } },
+    });
+  }
+  catch (error) {
     return next(error);
   }
 }

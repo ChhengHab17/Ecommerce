@@ -9,7 +9,7 @@ const isAuthenticated = async (
 ) => {
   try {
     const token =
-      req.cookies.access_token || req.headers.authorization?.split(' ')[1];
+      req.cookies["access_token"] || req.cookies["seller_access_token"] || req.headers.authorization?.split(' ')[1];
     if (!token) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
@@ -18,17 +18,24 @@ const isAuthenticated = async (
     const decoded = jwt.verify(
       token,
       process.env.ACCESS_TOKEN_SECRET! as string,
-    ) as { userId: string; role: 'user' | 'admin' };
+    ) as { userId: string; role: 'user' | 'seller' | 'admin' };
     if (!decoded) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
-    const account = await prisma.users.findUnique({
-      where: { id: decoded.userId },
-    });
+
+    let account;
+    if (decoded.role === 'user') {
+        await prisma.users.findUnique({ where: { id: decoded.userId } });
+        req.user = account;
+    }else if (decoded.role === 'seller') {
+        await prisma.sellers.findUnique({ where: { id: decoded.userId }, include: { shop: true } });
+        req.seller = account;
+    }
+
     if (!account) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
-    req.user = account;
+    req.role = decoded.role;
     return next();
   } catch (error) {
     return next(error);

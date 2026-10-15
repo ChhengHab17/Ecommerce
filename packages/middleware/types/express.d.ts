@@ -4,6 +4,8 @@ declare global {
   namespace Express {
     interface Request {
       user?: User | null;
+      seller?:Seller | null; 
+      role?: 'user' | 'seller' | 'admin';
     }
   }
 }
