@@ -92,7 +92,7 @@ const ForgotPassword = () => {
     mutationFn: async (password: string) => {
       if (!password) return;
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/reset-password`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/reset-password-user`,
         { email: userEmail, newPassword: password },
       );
       return response.data;

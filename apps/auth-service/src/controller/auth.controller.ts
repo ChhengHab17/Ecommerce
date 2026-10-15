@@ -200,3 +200,97 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     return next(error);
   }
 }
+
+// register new seller
+export const registerSeller = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    validateResgistrationData(req.body, 'seller');
+
+    const { name , email } = req.body;
+    const existingSeller = await prisma.sellers.findUnique({
+      where: { email },
+    });
+    if (existingSeller) {
+      throw new ValidationError('Seller already exists');
+    }
+    await checkOtpRestritions(email, next);
+    await trackOtpRequest(email, next);
+    await sendOtp(name, email, 'seller-activation');
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email. Please check your inbox.',
+    });
+  }
+  catch (error) {
+    return next(error);
+  }
+}
+
+// verify seller with otp
+
+export const verifySeller = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, otp, password, name, phone_number } = req.body;
+    if (!email || !otp || !password || !name) {
+      return next(new ValidationError('Missing required fields'));
+    }
+    const existingSeller = await prisma.sellers.findUnique({
+      where: { email },
+    });
+    if (existingSeller) {
+      return next(new ValidationError('Seller already exists'));
+    }
+
+    await verifyOtp(email, otp, next);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const seller = await prisma.sellers.create({
+      data: {
+        email,
+        password: hashedPassword,
+        phone_number,
+        name,
+      },
+    });
+    res.status(201).json({
+      success: true,
+      seller,
+      message: 'Seller registered successfully',
+    })
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// create new shop
+
+export const createShop = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name , bio, category, address, opening_hours, social_links, sellerId, website } = req.body;
+    if (!name || !bio || !category || !address || !opening_hours || !social_links || !sellerId) {
+      return next(new ValidationError('Missing required fields'));
+    }
+    const shopData:any = {
+      name,
+      bio,
+      category,
+      address,
+      opening_hours,
+      social_links,
+      sellerId,
+    }
+
+    if (website && website.trim() !== '') {
+      shopData.website = website;
+    }
+    const shop = await prisma.shops.create({
+      data: shopData,
+    });
+    res.status(201).json({
+      success: true,
+      shop,
+      message: 'Shop created successfully',
+    });
+  }catch (error) {
+    return next(error);
+  }
+}
