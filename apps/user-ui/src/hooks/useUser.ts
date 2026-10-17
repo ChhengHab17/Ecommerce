@@ -4,7 +4,7 @@ import axiosInstance from "../app/utils/axoisInstance";
 
 const fetchUser = async () => {
     const response = await axiosInstance.get("/api/loggedinUser");
-    return response.data;
+    return response.data.user;
 }
 
 const useUser = () => {

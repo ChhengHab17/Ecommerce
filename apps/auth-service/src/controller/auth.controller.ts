@@ -42,9 +42,13 @@ export const userRegister = async (
   }
 };
 
-export const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const { email, otp, password, name} = req.body;
+    const { email, otp, password, name } = req.body;
 
     if (!email || !otp || !password || !name) {
       return next(new ValidationError('Missing required fields'));
@@ -69,13 +73,16 @@ export const verifyUser = async (req: Request, res: Response, next: NextFunction
     return res.status(201).json({
       message: 'User registered successfully',
       success: true,
-    })
-
-  }catch (error) {
+    });
+  } catch (error) {
     return next(error);
   }
-}
-export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+};
+export const loginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -91,13 +98,23 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
     if (!isPasswordValid) {
       return next(new ValidationError('Invalid email or password'));
     }
+    res.clearCookie('seller_access_token');
+    res.clearCookie('seller_refresh_token');
 
-    const accessToken = jwt.sign({ userId: user.id, role: "user" }, process.env.ACCESS_TOKEN_SECRET!, {
-      expiresIn: '15m',
-    });
-    const refreshToken = jwt.sign({ userId: user.id, role: "user" }, process.env.REFRESH_TOKEN_SECRET!, {
-      expiresIn: '7d',
-    });
+    const accessToken = jwt.sign(
+      { id: user.id, role: 'user' },
+      process.env.ACCESS_TOKEN_SECRET!,
+      {
+        expiresIn: '15m',
+      },
+    );
+    const refreshToken = jwt.sign(
+      { id: user.id, role: 'user' },
+      process.env.REFRESH_TOKEN_SECRET!,
+      {
+        expiresIn: '7d',
+      },
+    );
     setCookie(res, 'access_token', accessToken);
     setCookie(res, 'refresh_token', refreshToken);
     console.log('Access Token:', accessToken);
@@ -107,12 +124,15 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
       success: true,
       data: { user: { id: user.id, email: user.email, name: user.name } },
     });
-
-  }catch (error){
+  } catch (error) {
     return next(error);
   }
-}
-export const getUser = async (req: Request, res: Response, next: NextFunction) => {
+};
+export const getUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const user = req.user;
     if (!user) {
@@ -126,50 +146,86 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
   } catch (error) {
     return next(error);
   }
-}
-export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+};
+export const refreshToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const refreshToken = req.cookies.refresh_token;
+    const refreshToken =
+      req.cookies['refresh_token'] ||
+      req.cookies['seller_refresh_token'] ||
+      req.headers.authorization?.split(' ')[1];
 
-    if(!refreshToken) {
+    if (!refreshToken) {
       throw new ValidationError('Refresh token not found');
     }
-    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET! as string) as { userId: string, role: string };
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET! as string,
+    ) as { id: string; role: string };
 
-    if (!decoded || !decoded.userId || decoded.role !== 'user') {
+    if (!decoded?.id || !['user', 'seller'].includes(decoded.role)) {
       throw new JsonWebTokenError('Invalid refresh token');
     }
-    const user = await prisma.users.findUnique({
-      where: { id: decoded.userId },
-    });
-    if (!user) {
+    let account;
+    if (decoded.role === 'user') {
+      account = await prisma.users.findUnique({
+        where: { id: decoded.id },
+      });
+    } else if (decoded.role === 'seller') {
+      account = await prisma.sellers.findUnique({
+        where: { id: decoded.id },
+        include: { shop: true },
+      });
+    }
+    if (!account) {
       throw new AuthenticationError('User not found');
     }
 
-    const newAccessToken = jwt.sign({ userId: user.id, role: "user" }, process.env.ACCESS_TOKEN_SECRET!, {
-      expiresIn: '15m',
-    });
-    setCookie(res, 'access_token', newAccessToken);
+    const newAccessToken = jwt.sign(
+      { id: decoded.id, role: decoded.role },
+      process.env.ACCESS_TOKEN_SECRET!,
+      {
+        expiresIn: '15m',
+      },
+    );
+    if (decoded.role === 'user') {
+      setCookie(res, 'access_token', newAccessToken);
+    } else if (decoded.role === 'seller') {
+      setCookie(res, 'seller_access_token', newAccessToken);
+    }
     return res.status(201).json({
       success: true,
     });
-
-
-  }catch (error) {
+  } catch (error) {
     return next(error);
   }
-}
-export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
-  await handleForgotPassword(req, res, next, "user");
-}
+};
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  await handleForgotPassword(req, res, next, 'user');
+};
 
-export const verifyForgotPasswordOtp = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyForgotPasswordOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   await handleVerifyForgotPasswordOtp(req, res, next);
-}
+};
 
-export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const {email, newPassword} = req.body;
+    const { email, newPassword } = req.body;
     if (!email || !newPassword) {
       return next(new ValidationError('Missing required fields'));
     }
@@ -182,7 +238,11 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 
     const isSamePassword = await bcrypt.compare(newPassword, user.password!);
     if (isSamePassword) {
-      return next(new ValidationError('New password cannot be the same as the old password'));
+      return next(
+        new ValidationError(
+          'New password cannot be the same as the old password',
+        ),
+      );
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -195,18 +255,21 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
       message: 'Password reset successfully',
       success: true,
     });
-  }
-  catch (error){
+  } catch (error) {
     return next(error);
   }
-}
+};
 
 // register new seller
-export const registerSeller = async (req: Request, res: Response, next: NextFunction) => {
+export const registerSeller = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     validateResgistrationData(req.body, 'seller');
 
-    const { name , email } = req.body;
+    const { name, email } = req.body;
     const existingSeller = await prisma.sellers.findUnique({
       where: { email },
     });
@@ -220,15 +283,18 @@ export const registerSeller = async (req: Request, res: Response, next: NextFunc
       success: true,
       message: 'OTP sent to your email. Please check your inbox.',
     });
-  }
-  catch (error) {
+  } catch (error) {
     return next(error);
   }
-}
+};
 
 // verify seller with otp
 
-export const verifySeller = async (req: Request, res: Response, next: NextFunction) => {
+export const verifySeller = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { email, otp, password, name, phone_number } = req.body;
     if (!email || !otp || !password || !name) {
@@ -255,21 +321,21 @@ export const verifySeller = async (req: Request, res: Response, next: NextFuncti
       success: true,
       seller,
       message: 'Seller registered successfully',
-    })
+    });
   } catch (error) {
     return next(error);
   }
-}
+};
 
 // create new shop
 
-export const createShop = async (req: Request, res: Response, next: NextFunction) => {
+export const createShop = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const { name , bio, category, address, opening_hours, social_links, sellerId, website } = req.body;
-    if (!name || !bio || !category || !address || !opening_hours || !sellerId) {
-      return next(new ValidationError('Missing required fields'));
-    }
-    const shopData:any = {
+    const {
       name,
       bio,
       category,
@@ -277,7 +343,20 @@ export const createShop = async (req: Request, res: Response, next: NextFunction
       opening_hours,
       social_links,
       sellerId,
+      website,
+    } = req.body;
+    if (!name || !bio || !category || !address || !opening_hours || !sellerId) {
+      return next(new ValidationError('Missing required fields'));
     }
+    const shopData: any = {
+      name,
+      bio,
+      category,
+      address,
+      opening_hours,
+      social_links,
+      sellerId,
+    };
 
     if (website && website.trim() !== '') {
       shopData.website = website;
@@ -290,12 +369,16 @@ export const createShop = async (req: Request, res: Response, next: NextFunction
       shop,
       message: 'Shop created successfully',
     });
-  }catch (error) {
+  } catch (error) {
     return next(error);
   }
-}
+};
 
-export const loginSeller = async (req: Request, res: Response, next: NextFunction) => {
+export const loginSeller = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -311,37 +394,53 @@ export const loginSeller = async (req: Request, res: Response, next: NextFunctio
     if (!isMatchingPassword) {
       return next(new ValidationError('Invalid email or password'));
     }
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
 
-    const accessToken = jwt.sign({ sellerId: seller.id, role: "seller" }, process.env.ACCESS_TOKEN_SECRET!, {
-      expiresIn: '15m',
-    });
-    const refreshToken = jwt.sign({ sellerId: seller.id, role: "seller" }, process.env.REFRESH_TOKEN_SECRET!, {
-      expiresIn: '7d',
-    });
+    const accessToken = jwt.sign(
+      { id: seller.id, role: 'seller' },
+      process.env.ACCESS_TOKEN_SECRET!,
+      {
+        expiresIn: '15m',
+      },
+    );
+    const refreshToken = jwt.sign(
+      { id: seller.id, role: 'seller' },
+      process.env.REFRESH_TOKEN_SECRET!,
+      {
+        expiresIn: '7d',
+      },
+    );
     setCookie(res, 'seller_access_token', accessToken);
     setCookie(res, 'seller_refresh_token', refreshToken);
 
     return res.status(200).json({
       message: 'Seller logged in successfully',
       success: true,
-      data: { seller: { id: seller.id, email: seller.email, name: seller.name } },
+      data: {
+        seller: { id: seller.id, email: seller.email, name: seller.name },
+      },
     });
-  }
-  catch (error) {
+  } catch (error) {
     return next(error);
   }
-}
+};
 
-export const getSeller = async (req: Request, res: Response, next: NextFunction) => {
+export const getSeller = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const seller = req.seller;
     res.status(201).json({
       message: 'Seller found',
       success: true,
-      data: { seller: { id: seller?.id, email: seller?.email, name: seller?.name } },
+      data: {
+        seller: { id: seller?.id, email: seller?.email, name: seller?.name, shop: seller?.shop },
+      },
     });
-  }
-  catch (error) {
+  } catch (error) {
     return next(error);
   }
-}
+};

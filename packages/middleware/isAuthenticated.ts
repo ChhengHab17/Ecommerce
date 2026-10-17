@@ -18,17 +18,17 @@ const isAuthenticated = async (
     const decoded = jwt.verify(
       token,
       process.env.ACCESS_TOKEN_SECRET! as string,
-    ) as { userId: string; role: 'user' | 'seller' | 'admin' };
+    ) as { id: string; role: 'user' | 'seller' | 'admin' };
     if (!decoded) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
     let account;
     if (decoded.role === 'user') {
-        await prisma.users.findUnique({ where: { id: decoded.userId } });
+        account = await prisma.users.findUnique({ where: { id: decoded.id  } });
         req.user = account;
     }else if (decoded.role === 'seller') {
-        await prisma.sellers.findUnique({ where: { id: decoded.userId }, include: { shop: true } });
+        account = await prisma.sellers.findUnique({ where: { id: decoded.id }, include: { shop: true } });
         req.seller = account;
     }
 
