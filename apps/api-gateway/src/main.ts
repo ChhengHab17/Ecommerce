@@ -13,6 +13,7 @@ import axios from 'axios';
 import cookieParser from 'cookie-parser';
 
 import * as path from 'path';
+import { initializeSiteConfig } from './libs/initializeSiteConfig';
 
 const app = express();
 app.use(cors({
@@ -50,5 +51,12 @@ app.use('/', proxy('http://localhost:5000'));
 const port = process.env.PORT || 8080;
 const server = app.listen(port, () => {
   console.log(`Listening at http://localhost:${port}/api`);
+  try{
+
+    initializeSiteConfig();
+    console.log('Site config initialized successfully.');
+  }catch(err){
+    console.error('Error initializing site config:', err);
+  }
 });
 server.on('error', console.error);

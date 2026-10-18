@@ -5,6 +5,8 @@ import Input from 'packages/components/input';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import ColorSelector from 'packages/components/color-selector';
+import CustomSpecifications from 'packages/components/custom-specification-selector';
+import CustomProperties from 'packages/components/custom-properties';
 
 const Page = () => {
   const {
@@ -165,16 +167,16 @@ const Page = () => {
                   {...register('slug', {
                     required: 'Slug is required',
                     pattern: {
-                        value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                        message: 'Slug must be lowercase and can contain hyphens',
+                      value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                      message: 'Slug must be lowercase and can contain hyphens',
                     },
                     minLength: {
-                        value: 3,
-                        message: 'Slug must be at least 3 characters long',
+                      value: 3,
+                      message: 'Slug must be at least 3 characters long',
                     },
                     maxLength: {
-                        value: 50,
-                        message: 'Slug must be at most 50 characters long',
+                      value: 50,
+                      message: 'Slug must be at most 50 characters long',
                     },
                   })}
                 />
@@ -196,11 +198,40 @@ const Page = () => {
                   </p>
                 )}
               </div>
-              <div
-                className="mt-2"
-              >
+              <div className="mt-2">
                 <ColorSelector control={control} error={errors} />
               </div>
+              <div className="mt-2">
+                <CustomSpecifications control={control} errors={errors} />
+              </div>
+              <div className="mt-2">
+                <CustomProperties control={control} errors={errors} />
+              </div>
+              <div className="mt-2">
+                <label className="block font-semibold text-gray-300 mb-1">
+                  Cash on Delivery
+                </label>
+                <select
+                  {...register('cash_on_delivery', {
+                    required: 'Please select an option',
+                  })}
+                  defaultValue="yes"
+                  className="w-full p-2 rounded-md bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+                {errors.cash_on_delivery && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.cash_on_delivery.message as string}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="w-2/4">
+                <label className="block font-semibold text-gray-300 mb-1">
+                  Category *
+                </label>
             </div>
           </div>
         </div>

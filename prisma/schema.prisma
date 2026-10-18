@@ -85,3 +85,11 @@ model sellers {
   shopId String? @db.ObjectId
   @@map("sellers")
 }
+
+model site_config {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  categories String[]
+  subCategories Json
+
+  @@map("site_config")
+}
