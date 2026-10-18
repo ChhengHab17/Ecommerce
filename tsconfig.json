@@ -41,6 +41,9 @@
     },
     {
       "path": "./apps/admin-ui"
+    },
+    {
+      "path": "./apps/product-service"
     }
   ]
 }

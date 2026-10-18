@@ -46,6 +46,7 @@ app.get('/gateway-health', (req, res) => {
   res.send({ message: 'Welcome to api-gateway!' });
 });
 
+app.use('/product', proxy('http://localhost:5002'));
 app.use('/', proxy('http://localhost:5000'));
 
 const port = process.env.PORT || 8080;

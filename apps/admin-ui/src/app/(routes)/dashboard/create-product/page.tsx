@@ -7,6 +7,8 @@ import { useForm } from 'react-hook-form';
 import ColorSelector from 'packages/components/color-selector';
 import CustomSpecifications from 'packages/components/custom-specification-selector';
 import CustomProperties from 'packages/components/custom-properties';
+import { useQuery } from 'node_modules/@tanstack/react-query/build/modern/useQuery';
+import axiosInstance from 'apps/admin-ui/src/utils/axoisInstance';
 
 const Page = () => {
   const {
@@ -23,6 +25,30 @@ const Page = () => {
   const [images, setImages] = useState<(File | null)[]>([null]);
   const [loading, setLoading] = useState(false);
 
+  const {data, isError, isLoading} = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      try {
+        const response = await axiosInstance.get('/product/api/getCategories');
+        const data = await response.data;
+        return data;
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        throw error;
+      }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  })
+
+  const categories = data?.categories || [];
+  const subCategories = data?.subCategories || {};
+
+  const selectedCategory = watch('category');
+  const regularPrice = watch('regular_price');
+
+  console.log(categories, subCategories);
+ 
   const onSubmit = (data: any) => {
     console.log(data);
   };
