@@ -28,7 +28,7 @@ app.get('/', (req, res) => {
   // });
 app.use('/api', router);
 app.use(errorMiddleware);
-const port = process.env.PORT || 5002;
+const port = 5002;
 
 const server = app.listen(port, () => {
   console.log(`Listening at http://localhost:${port}/api`);

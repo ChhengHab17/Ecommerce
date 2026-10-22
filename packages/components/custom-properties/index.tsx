@@ -99,11 +99,11 @@ const CustomProperties = ({ control, errors }: any) => {
                       onChange={(e: any) => setNewLabel(e.target.value)}
                     />
                     <button
-                      className="px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition"
+                      className="px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition flex items-center gap-1"
                       type="button"
                       onClick={addProperty}
                     >
-                      <Plus size={16} />
+                      <Plus size={14} />
                       Add
                     </button>
                   </div>

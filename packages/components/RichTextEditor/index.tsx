@@ -61,18 +61,3 @@ export default function RichTextEditor({
   );
 }
 
-/* Install: npm i react-quill-new
-
-Usage (any page or component, App Router or Pages Router):
-
-"use client";
-import { useState } from "react";
-import RichTextEditor from "@/components/RichTextEditor";
-
-export default function Example() {
-  const [html, setHtml] = useState("");
-  return <RichTextEditor value={html} onChange={setHtml} />;
-}
-
-The value is HTML — sanitize before storing/rendering.
-*/

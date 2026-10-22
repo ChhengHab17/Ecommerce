@@ -12,6 +12,11 @@ import axiosInstance from 'apps/admin-ui/src/utils/axoisInstance';
 import RichTextEditor from 'packages/components/RichTextEditor';
 import { SizeSelector } from 'packages/components/size-selector';
 
+interface UploadedImage {
+  file_url: string;
+  fileId: string;
+}
+
 const Page = () => {
   const {
     register,
@@ -24,7 +29,7 @@ const Page = () => {
 
   const [openImageModal, setOpenImageModal] = useState(false);
   const [isChanged, setIsChanged] = useState(true);
-  const [images, setImages] = useState<(File | null)[]>([null]);
+  const [images, setImages] = useState<(UploadedImage | null)[]>([null]);
   const [loading, setLoading] = useState(false);
 
   const { data, isError, isLoading } = useQuery({
@@ -42,6 +47,13 @@ const Page = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
+  const { data: discountCodes = [], isLoading: discountLoading } = useQuery({
+    queryKey: ['shop-discounts'],
+    queryFn: async () => {
+      const response = await axiosInstance.get('/product/api/discount-codes');
+      return response.data?.discountCodes || [];
+    },
+  });
 
   const categories = data?.categories || [];
   const subCategoriesData = data?.subCategories || {};
@@ -58,30 +70,60 @@ const Page = () => {
     console.log(data);
   };
 
-  const handleImageChange = (file: File | null, index: number) => {
-    const updatedImages = [...images];
-    updatedImages[index] = file;
-    if (index === images.length - 1 && images.length < 8) {
-      updatedImages.push(null); // Add a new empty slot for the next image
+  const convertFileToBase64 = (file: File) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+  const handleImageChange = async (file: File | null, index: number) => {
+    if (!file) return;
+    try {
+      const fileName = await convertFileToBase64(file);
+      const response = await axiosInstance.post(
+        '/product/api/upload-product-image',
+        { fileName },
+      );
+      const updatedImages = [...images];
+      const uploadedImage = {
+        file_url: response.data.file_url,
+        fileId: response.data.fileId,
+      };
+      updatedImages[index] = uploadedImage;
+
+      if (index === images.length - 1 && updatedImages.length < 8) {
+        updatedImages.push(null);
+      }
+      setImages(updatedImages);
+      setValue('images', updatedImages);
+    } catch (error) {
+      console.error('Error handling image change:', error);
     }
-    setImages(updatedImages);
-    setValue('images', updatedImages);
   };
 
-  const handelRemoveImage = (index: number) => {
-    setImages((prevImages) => {
-      let updatedImages = [...prevImages];
-      if (index === -1) {
-        updatedImages[0] = null;
-      } else {
-        updatedImages.splice(index, 1);
+  const handelRemoveImage = async (index: number) => {
+    try {
+      const updatedImages = [...images];
+      const imageToRemove = updatedImages[index];
+      if (imageToRemove && typeof imageToRemove === 'object') {
+        await axiosInstance.delete('/product/api/delete-product-image', {
+          data: {
+            fileId: imageToRemove.fileId,
+          },
+        });
       }
+      updatedImages.splice(index, 1);
+      // Add null placeholder
       if (!updatedImages.includes(null) && updatedImages.length < 8) {
         updatedImages.push(null);
       }
-      return updatedImages;
-    });
-    setValue('images', images);
+      setImages(updatedImages);
+      setValue('images', updatedImages);
+    } catch (error) {
+      console.error('Error removing image:', error);
+    }
   };
   const handleSaveDraft = () => {};
 
@@ -119,7 +161,7 @@ const Page = () => {
                 index={index + 1}
                 onImageChange={handleImageChange}
                 onRemove={handelRemoveImage}
-                defaultImage={image ? URL.createObjectURL(image) : null}
+                defaultImage={image?.file_url ?? null}
               />
             ))}
           </div>
@@ -469,6 +511,37 @@ const Page = () => {
                   <label className="block font-semibold text-gray-300 mb-1">
                     Discount Code (Optional)
                   </label>
+                  {discountLoading ? (
+                    <p className="text-gray-400">Loading discount codes...</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {discountCodes.map((code: any) => (
+                        <button
+                          key={code.id}
+                          type="button"
+                          className={`px-3 py-1 rounded-md text-sm font-semibold border ${
+                            watch('discountCodes')?.includes(code.id)
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'bg-gray-800 text-gray-300 border-gray-700'
+                          }`}
+                          onClick={() => {
+                            const currentSelections =
+                              watch('discountCodes') || [];
+                            const updatedSelections =
+                              currentSelections.includes(code.id)
+                                ? currentSelections.filter(
+                                    (id: string) => id !== code.id,
+                                  )
+                                : [...currentSelections, code.id];
+                            setValue('discountCodes', updatedSelections);
+                          }}
+                        >
+                          {code.public_name} ({code.discountValue}{' '}
+                          {code.discountType === 'percentage' ? '%' : '$'})
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -485,7 +558,11 @@ const Page = () => {
             Save Draft
           </button>
         )}
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md" disabled={loading}>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+          disabled={loading}
+        >
           {loading ? 'Creating...' : 'Create Product'}
         </button>
       </div>
